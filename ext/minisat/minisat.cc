@@ -32,6 +32,7 @@ static void minisat_solver_free(void *solver);
 static size_t minisat_solver_memsize(const void *solver);
 static VALUE minisat_solver_add_clause(VALUE self, VALUE lits);
 static VALUE minisat_solver_solve(VALUE self);
+static VALUE minisat_solver_satisfied(VALUE self);
 
 static void minisat_var_mark(void *wrapper);
 static void minisat_var_free(void *wrapper);
@@ -204,6 +205,21 @@ VALUE minisat_solver_solve(VALUE self)
     model->ary[i] = solver->model[i];
   }
   return TypedData_Wrap_Struct(rb_cModel, &minisat_model_type, model);
+}
+
+VALUE minisat_solver_satisfied(VALUE self)
+{
+  Minisat::Solver *solver;
+  TypedData_Get_Struct(self, Minisat::Solver, &minisat_solver_type, solver);
+
+  if (!solver->simplify()) {
+    return Qfalse;
+  }
+
+  if (solver->okay()) {
+    return Qtrue;
+  }
+  return Qfalse;
 }
 
 /* Document-class: MiniSat::Var
@@ -521,6 +537,7 @@ void Init_minisat(void)
   rb_define_alloc_func(rb_cSolver, minisat_solver_alloc);
   rb_define_method(rb_cSolver, "add_clause", RUBY_METHOD_FUNC(minisat_solver_add_clause), 1);
   rb_define_method(rb_cSolver, "solve", RUBY_METHOD_FUNC(minisat_solver_solve), 0);
+  rb_define_method(rb_cSolver, "satisfied?", RUBY_METHOD_FUNC(minisat_solver_satisfied), 0);
 
   rb_cVar = rb_define_class_under(rb_mMiniSat, "Var", rb_cObject);
   rb_define_alloc_func(rb_cVar, minisat_var_alloc);
